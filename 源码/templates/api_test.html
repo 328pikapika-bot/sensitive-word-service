@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API 在线测试 - 敏感词检测系统</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1e1e2e;
+            color: #cdd6f4;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* ============ 侧边栏 ============ */
+        .sidebar {
+            width: 300px;
+            min-width: 300px;
+            background: #181825;
+            border-right: 1px solid #313244;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            position: sticky;
+            top: 0;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #313244;
+        }
+
+        .sidebar-header h1 {
+            font-size: 1.3em;
+            color: #89b4fa;
+            margin-bottom: 4px;
+        }
+
+        .sidebar-header p {
+            font-size: 0.75em;
+            color: #6c7086;
+        }
+
+        .sidebar-header .badge {
+            display: inline-block;
+            background: #313244;
+            color: #a6e3a1;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.7em;
+            margin-top: 6px;
+            font-weight: 600;
+        }
+
+        .api-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        .api-list-section {
+            margin-bottom: 8px;
+        }
+
+        .api-list-section-title {
+            font-size: 0.7em;
+            text-transform: uppercase;
+            color: #6c7086;
+            padding: 8px 12px 4px;
+            letter-spacing: 1px;
+        }
+
+        .api-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-bottom: 2px;
+        }
+
+        .api-item:hover {
+            background: #313244;
+        }
+
+        .api-item.active {
+            background: #45475a;
+        }
+
+        .api-item .method {
+            font-size: 0.7em;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-right: 8px;
+            min-width: 38px;
+            text-align: center;
+        }
+
+        .method-post { background: #f38ba8; color: #1e1e2e; }
+        .method-get { background: #a6e3a1; color: #1e1e2e; }
+
+        .api-item .path {
+            font-size: 0.8em;
+            color: #cdd6f4;
+            word-break: break-all;
+            line-height: 1.3;
+        }
+
+        .api-item.active .path {
+            color: #fff;
+        }
+
+        .sidebar-footer {
+            padding: 12px 20px;
+            border-top: 1px solid #313244;
+            font-size: 0.7em;
+            color: #6c7086;
+        }
+
+        .sidebar-footer a {
+            color: #89b4fa;
+            text-decoration: none;
+        }
+
+        .sidebar-footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* ============ 主内容区 ============ */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* --- 顶部栏 --- */
+        .topbar {
+            background: #181825;
+            border-bottom: 1px solid #313244;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .topbar .method-badge {
+            font-size: 0.8em;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 4px;
+        }
+
+        .topbar .url-display {
+            flex: 1;
+            min-width: 200px;
+            background: #313244;
+            border: 1px solid #45475a;
+            border-radius: 6px;
+            padding: 8px 14px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.85em;
+            color: #cdd6f4;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+
+        .topbar .url-display .base-url {
+            color: #6c7086;
+        }
+
+        .topbar .url-display .path-url {
+            color: #fab387;
+        }
+
+        .btn-send {
+            background: #89b4fa;
+            color: #1e1e2e;
+            border: none;
+            padding: 8px 28px;
+            border-radius: 6px;
+            font-size: 0.9em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-send:hover {
+            background: #b4befe;
+        }
+
+        .btn-send:disabled {
+            background: #45475a;
+            color: #6c7086;
+            cursor: not-allowed;
+        }
+
+        /* --- 内容区 --- */
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+        }
+
+        /* API 描述卡片 */
+        .api-desc {
+            background: #181825;
+            border: 1px solid #313244;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+        }
+
+        .api-desc h2 {
+            font-size: 1.1em;
+            color: #f9e2af;
+            margin-bottom: 6px;
+        }
+
+        .api-desc p {
+            font-size: 0.82em;
+            color: #a6adc8;
+            line-height: 1.5;
+        }
+
+        .api-desc .tags {
+            margin-top: 8px;
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .api-desc .tag {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 3px;
+            background: #313244;
+            color: #94e2d5;
+        }
+
+        /* 参数区域 */
+        .section-card {
+            background: #181825;
+            border: 1px solid #313244;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .section-card-header {
+            padding: 12px 20px;
+            border-bottom: 1px solid #313244;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .section-card-header h3 {
+            font-size: 0.95em;
+            color: #cdd6f4;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-card-header h3 .icon {
+            color: #89b4fa;
+        }
+
+        .section-card-header .actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .section-card-header .actions button {
+            background: #313244;
+            color: #cdd6f4;
+            border: none;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .section-card-header .actions button:hover {
+            background: #45475a;
+        }
+
+        .section-card-body {
+            padding: 20px;
+        }
+
+        /* 参数表格 */
+        .param-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .param-table th {
+            text-align: left;
+            font-size: 0.75em;
+            color: #6c7086;
+            text-transform: uppercase;
+            padding: 8px 12px;
+            border-bottom: 1px solid #313244;
+        }
+
+        .param-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #313244;
+            font-size: 0.85em;
+            vertical-align: top;
+        }
+
+        .param-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .param-name {
+            color: #fab387;
+            font-family: 'Consolas', monospace;
+            font-weight: 600;
+        }
+
+        .param-type {
+            color: #94e2d5;
+            font-size: 0.8em;
+        }
+
+        .param-required {
+            color: #f38ba8;
+            font-size: 0.7em;
+            padding: 1px 5px;
+            border-radius: 3px;
+            background: rgba(243,139,168,0.15);
+        }
+
+        .param-optional {
+            color: #6c7086;
+            font-size: 0.7em;
+            padding: 1px 5px;
+            border-radius: 3px;
+            background: #313244;
+        }
+
+        .param-desc {
+            color: #a6adc8;
+            line-height: 1.4;
+        }
+
+        .param-input {
+            width: 100%;
+            background: #313244;
+            border: 1px solid #45475a;
+            border-radius: 4px;
+            padding: 8px 10px;
+            color: #cdd6f4;
+            font-size: 0.85em;
+            font-family: 'Consolas', monospace;
+            outline: none;
+            transition: border 0.2s;
+        }
+
+        .param-input:focus {
+            border-color: #89b4fa;
+        }
+
+        textarea.param-input {
+            resize: vertical;
+            min-height: 80px;
+            line-height: 1.5;
+        }
+
+        .param-select {
+            background: #313244;
+            border: 1px solid #45475a;
+            border-radius: 4px;
+            padding: 6px 10px;
+            color: #cdd6f4;
+            font-size: 0.85em;
+            cursor: pointer;
+        }
+
+        /* JSON 预览 */
+        .json-preview {
+            background: #11111b;
+            border: 1px solid #313244;
+            border-radius: 6px;
+            padding: 16px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.82em;
+            line-height: 1.6;
+            overflow-x: auto;
+            white-space: pre;
+            color: #cdd6f4;
+        }
+
+        /* 响应区域 */
+        .response-meta {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .response-meta .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8em;
+        }
+
+        .response-meta .meta-label {
+            color: #6c7086;
+        }
+
+        .response-meta .meta-value {
+            font-weight: 600;
+        }
+
+        .status-2xx { color: #a6e3a1; }
+        .status-4xx { color: #f9e2af; }
+        .status-5xx { color: #f38ba8; }
+
+        .response-tabs {
+            display: flex;
+            gap: 2px;
+            margin-bottom: 12px;
+            border-bottom: 1px solid #313244;
+        }
+
+        .response-tab {
+            padding: 6px 16px;
+            cursor: pointer;
+            font-size: 0.82em;
+            color: #6c7086;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .response-tab:hover {
+            color: #cdd6f4;
+        }
+
+        .response-tab.active {
+            color: #89b4fa;
+            border-bottom-color: #89b4fa;
+        }
+
+        .response-body {
+            background: #11111b;
+            border: 1px solid #313244;
+            border-radius: 6px;
+            padding: 16px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.82em;
+            line-height: 1.6;
+            overflow-x: auto;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .response-body .json-key { color: #89b4fa; }
+        .response-body .json-string { color: #a6e3a1; }
+        .response-body .json-number { color: #fab387; }
+        .response-body .json-bool { color: #cba6f7; }
+        .response-body .json-null { color: #6c7086; }
+        .response-body .json-brace { color: #cdd6f4; }
+
+        .response-body.markdown-view {
+            font-family: 'Segoe UI', sans-serif;
+            color: #cdd6f4;
+            white-space: normal;
+        }
+
+        .response-body.markdown-view h1 { color: #f9e2af; font-size: 1.5em; margin: 12px 0 8px; }
+        .response-body.markdown-view h2 { color: #89b4fa; font-size: 1.2em; margin: 10px 0 6px; }
+        .response-body.markdown-view h3 { color: #94e2d5; font-size: 1.05em; margin: 8px 0 4px; }
+        .response-body.markdown-view p { margin: 6px 0; line-height: 1.6; }
+        .response-body.markdown-view ul, .response-body.markdown-view ol { margin: 6px 0 6px 20px; }
+        .response-body.markdown-view li { margin: 3px 0; line-height: 1.5; }
+        .response-body.markdown-view strong { color: #f38ba8; }
+        .response-body.markdown-view em { color: #f9e2af; }
+        .response-body.markdown-view code { background: #313244; padding: 1px 4px; border-radius: 3px; font-size: 0.9em; }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c7086;
+        }
+
+        .empty-state .icon {
+            font-size: 3em;
+            margin-bottom: 12px;
+            opacity: 0.3;
+        }
+
+        .empty-state p {
+            font-size: 0.85em;
+        }
+
+        /* 加载动画 */
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #313244;
+            border-top-color: #89b4fa;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* 滚动条 */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #181825; }
+        ::-webkit-scrollbar-thumb { background: #313244; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #45475a; }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            .sidebar { width: 100%; min-width: 100%; height: auto; max-height: 250px; }
+            .main { height: calc(100vh - 250px); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ===== 侧边栏 ===== -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h1>API 在线测试</h1>
+            <p>敏感词检测系统 V1.1</p>
+            <span class="badge">4 个接口</span>
+        </div>
+        <div class="api-list" id="apiList">
+            <!-- 由 JS 动态生成 -->
+        </div>
+        <div class="sidebar-footer">
+            <a href="/">返回主页</a>
+            &nbsp;|&nbsp;
+            <a href="/api_test">刷新</a>
+        </div>
+    </div>
+
+    <!-- ===== 主内容区 ===== -->
+    <div class="main">
+        <!-- 顶部栏 -->
+        <div class="topbar">
+            <span class="method-badge method-post" id="topMethod">POST</span>
+            <div class="url-display" id="topUrl">
+                <span class="base-url" id="baseUrl">http://localhost:3309</span><span class="path-url" id="pathUrl">/api/sensitive_check</span>
+            </div>
+            <button class="btn-send" id="btnSend" onclick="sendRequest()">发送请求</button>
+        </div>
+
+        <!-- 内容区 -->
+        <div class="content" id="content">
+            <!-- 由 JS 动态生成 -->
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        // API 定义
+        // ============================================================
+        const API_DEFS = [
+            {
+                id: 'sensitive_check',
+                group: '敏感词检测',
+                method: 'POST',
+                path: '/api/sensitive_check',
+                title: '敏感词检测 API',
+                desc: '基于 Aho-Corasick 算法的敏感词快速检测。返回文本中发现的敏感词列表，多个词以分号分隔。支持直接文本输入或文件路径输入。',
+                tags: ['AC自动机', 'jieba分词', '毫秒级响应'],
+                params: [
+                    { name: 'content', type: 'String', required: true, desc: '待检测的文本内容（type=0时）或文件路径（type=1时）', input: 'textarea', placeholder: '请输入待检测文本...' },
+                    { name: 'type', type: 'Integer', required: false, desc: '输入类型：0=文本内容（默认），1=文件路径（支持txt/docx/pdf）', input: 'select', options: [
+                        { value: 0, label: '0 - 文本内容（默认）' },
+                        { value: 1, label: '1 - 文件路径' }
+                    ], default: 0 },
+                ],
+                sampleResponse: {
+                    "message": "操作成功！",
+                    "code": 200,
+                    "success": true,
+                    "data": "敏感词1;敏感词2"
+                }
+            },
+            {
+                id: 'sensitive_plus_check',
+                group: '敏感词检测',
+                method: 'POST',
+                path: '/api/sensitive_plus_check',
+                title: '敏感词检测 Plus API',
+                desc: '基于 ToolGood.Words 方案A 的增强检测引擎。在原引擎基础上增加文本归一化（全角转半角、繁体转简体、去除干扰符号），支持检测全角/繁体/符号干扰等变体，同时保留 jieba 词边界校验防止子串误报。返回文本中发现的敏感词列表，多个词以分号分隔。',
+                tags: ['AC自动机', '文本归一化', '全角/繁体/符号变体', 'jieba边界校验'],
+                params: [
+                    { name: 'content', type: 'String', required: true, desc: '待检测的文本内容（type=0时）或文件路径（type=1时）', input: 'textarea', placeholder: '请输入待检测文本（支持全角/繁体/符号干扰变体检测）...' },
+                    { name: 'type', type: 'Integer', required: false, desc: '输入类型：0=文本内容（默认），1=文件路径（支持txt/docx/pdf）', input: 'select', options: [
+                        { value: 0, label: '0 - 文本内容（默认）' },
+                        { value: 1, label: '1 - 文件路径' }
+                    ], default: 0 },
+                ],
+                sampleResponse: {
+                    "message": "操作成功！",
+                    "code": 200,
+                    "success": true,
+                    "data": "敏感词1;敏感词2"
+                }
+            },
+            {
+                id: 'semantic_check_plus',
+                group: '语义检测',
+                method: 'POST',
+                path: '/api/semantic_check_plus',
+                title: '语义检测 Plus API (V1)',
+                desc: '结合敏感词检测 + 大模型语义分析，生成详细的《内容合规性审查报告》。支持自定义系统提示词（question 参数）。',
+                tags: ['LLM', '敏感词+语义', 'Markdown报告'],
+                params: [
+                    { name: 'content', type: 'String', required: true, desc: '待检测的文本内容或文件路径', input: 'textarea', placeholder: '请输入待检测文本...' },
+                    { name: 'type', type: 'Integer', required: false, desc: '输入类型：0=文本（默认），1=文件路径', input: 'select', options: [
+                        { value: 0, label: '0 - 文本内容（默认）' },
+                        { value: 1, label: '1 - 文件路径' }
+                    ], default: 0 },
+                    { name: 'question', type: 'String', required: false, desc: '自定义系统提示词。留空则使用系统默认的审查报告提示词。传入后将替换默认的 System Prompt。', input: 'textarea', placeholder: '（可选）自定义系统提示词，留空使用默认...' },
+                ],
+                sampleResponse: {
+                    "message": "操作成功！",
+                    "code": 200,
+                    "success": true,
+                    "data": "# 内容合规性审查报告\n\n## 审查结果概述\n..."
+                }
+            },
+            {
+                id: 'semantic_check_plus_v2',
+                group: '语义检测',
+                method: 'POST',
+                path: '/api/v2/semantic_check_plus',
+                title: '语义检测 Plus API (V2)',
+                desc: 'V1 的增强版本。返回结果同时包含大模型分析报告和检测到的敏感词列表，方便调用方同时获取结构化数据。',
+                tags: ['LLM', '敏感词+语义', '双返回值'],
+                params: [
+                    { name: 'content', type: 'String', required: true, desc: '待检测的文本内容或文件路径', input: 'textarea', placeholder: '请输入待检测文本...' },
+                    { name: 'type', type: 'Integer', required: false, desc: '输入类型：0=文本（默认），1=文件路径', input: 'select', options: [
+                        { value: 0, label: '0 - 文本内容（默认）' },
+                        { value: 1, label: '1 - 文件路径' }
+                    ], default: 0 },
+                    { name: 'question', type: 'String', required: false, desc: '自定义系统提示词。留空使用默认审查报告提示词。', input: 'textarea', placeholder: '（可选）自定义系统提示词...' },
+                ],
+                sampleResponse: {
+                    "message": "操作成功！",
+                    "code": 200,
+                    "success": true,
+                    "data": {
+                        "llm_analysis": "# 内容合规性审查报告\n\n...",
+                        "found_words": "敏感词1;敏感词2"
+                    }
+                }
+            }
+        ];
+
+        let currentApi = API_DEFS[0];
+        let responseTab = 'formatted';
+
+        // ============================================================
+        // 渲染侧边栏
+        // ============================================================
+        function renderSidebar() {
+            const list = document.getElementById('apiList');
+            const groups = {};
+            API_DEFS.forEach(api => {
+                if (!groups[api.group]) groups[api.group] = [];
+                groups[api.group].push(api);
+            });
+
+            let html = '';
+            for (const [groupName, apis] of Object.entries(groups)) {
+                html += `<div class="api-list-section">`;
+                html += `<div class="api-list-section-title">${groupName}</div>`;
+                apis.forEach(api => {
+                    const activeClass = api.id === currentApi.id ? 'active' : '';
+                    html += `
+                        <div class="api-item ${activeClass}" onclick="selectApi('${api.id}')">
+                            <span class="method method-${api.method.toLowerCase()}">${api.method}</span>
+                            <span class="path">${api.path}</span>
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+            }
+            list.innerHTML = html;
+        }
+
+        // ============================================================
+        // 选择 API
+        // ============================================================
+        function selectApi(apiId) {
+            currentApi = API_DEFS.find(a => a.id === apiId);
+            renderSidebar();
+            renderContent();
+            updateTopbar();
+        }
+
+        // ============================================================
+        // 更新顶部栏
+        // ============================================================
+        function updateTopbar() {
+            document.getElementById('topMethod').textContent = currentApi.method;
+            document.getElementById('topMethod').className = 'method-badge method-' + currentApi.method.toLowerCase();
+            document.getElementById('pathUrl').textContent = currentApi.path;
+        }
+
+        // ============================================================
+        // 渲染内容区
+        // ============================================================
+        function renderContent() {
+            const content = document.getElementById('content');
+            let html = '';
+
+            // API 描述
+            html += `
+                <div class="api-desc">
+                    <h2>${currentApi.title}</h2>
+                    <p>${currentApi.desc}</p>
+                    <div class="tags">
+                        ${currentApi.tags.map(t => `<span class="tag">${t}</span>`).join('')}
+                    </div>
+                </div>
+            `;
+
+            // 参数区域
+            html += `
+                <div class="section-card">
+                    <div class="section-card-header">
+                        <h3><span class="icon">></span> 请求参数</h3>
+                        <div class="actions">
+                            <button onclick="fillSample()">填充示例</button>
+                            <button onclick="clearParams()">清空</button>
+                        </div>
+                    </div>
+                    <div class="section-card-body">
+                        <table class="param-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:140px">参数名</th>
+                                    <th style="width:70px">类型</th>
+                                    <th style="width:60px">必填</th>
+                                    <th>说明</th>
+                                    <th style="min-width:200px">输入</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${currentApi.params.map(p => `
+                                    <tr>
+                                        <td class="param-name">${p.name}</td>
+                                        <td class="param-type">${p.type}</td>
+                                        <td>${p.required ? '<span class="param-required">是</span>' : '<span class="param-optional">否</span>'}</td>
+                                        <td class="param-desc">${p.desc}</td>
+                                        <td>${renderParamInput(p)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+
+            // 请求 JSON 预览
+            html += `
+                <div class="section-card">
+                    <div class="section-card-header">
+                        <h3><span class="icon">{ }</span> 请求体预览 (JSON)</h3>
+                        <div class="actions">
+                            <button onclick="copyJson()">复制</button>
+                        </div>
+                    </div>
+                    <div class="section-card-body">
+                        <div class="json-preview" id="jsonPreview"></div>
+                    </div>
+                </div>
+            `;
+
+            // 响应区域
+            html += `
+                <div class="section-card">
+                    <div class="section-card-header">
+                        <h3><span class="icon"><-</span> 响应结果</h3>
+                        <div class="actions">
+                            <button onclick="copyResponse()">复制响应</button>
+                        </div>
+                    </div>
+                    <div class="section-card-body">
+                        <div class="response-meta" id="responseMeta" style="display:none;">
+                            <div class="meta-item">
+                                <span class="meta-label">状态码:</span>
+                                <span class="meta-value" id="metaStatus">-</span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="meta-label">耗时:</span>
+                                <span class="meta-value" id="metaTime">-</span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="meta-label">大小:</span>
+                                <span class="meta-value" id="metaSize">-</span>
+                            </div>
+                        </div>
+                        <div class="response-tabs" id="responseTabs" style="display:none;">
+                            <div class="response-tab ${responseTab === 'formatted' ? 'active' : ''}" onclick="switchTab('formatted')">格式化</div>
+                            <div class="response-tab ${responseTab === 'raw' ? 'active' : ''}" onclick="switchTab('raw')">原始</div>
+                            <div class="response-tab ${responseTab === 'markdown' ? 'active' : ''}" onclick="switchTab('markdown')">Markdown 渲染</div>
+                        </div>
+                        <div class="response-body" id="responseBody">
+                            <div class="empty-state">
+                                <div class="icon">~~~</div>
+                                <p>点击上方"发送请求"按钮查看响应结果</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            content.innerHTML = html;
+
+            // 绑定参数输入监听
+            currentApi.params.forEach(p => {
+                const el = document.getElementById('param_' + p.name);
+                if (el) {
+                    el.addEventListener('input', updateJsonPreview);
+                    if (p.input === 'select') {
+                        el.addEventListener('change', updateJsonPreview);
+                    }
+                }
+            });
+
+            updateJsonPreview();
+        }
+
+        // ============================================================
+        // 渲染参数输入控件
+        // ============================================================
+        function renderParamInput(param) {
+            if (param.input === 'textarea') {
+                return `<textarea class="param-input" id="param_${param.name}" placeholder="${param.placeholder || ''}"></textarea>`;
+            } else if (param.input === 'select') {
+                const opts = param.options.map(o => `<option value="${o.value}">${o.label}</option>`).join('');
+                return `<select class="param-select" id="param_${param.name}">${opts}</select>`;
+            }
+            return `<input type="text" class="param-input" id="param_${param.name}" placeholder="${param.placeholder || ''}">`;
+        }
+
+        // ============================================================
+        // 构建请求 JSON
+        // ============================================================
+        function buildRequestBody() {
+            const body = {};
+            currentApi.params.forEach(p => {
+                const el = document.getElementById('param_' + p.name);
+                if (el) {
+                    let val = el.value;
+                    if (p.input === 'select') {
+                        val = parseInt(val);
+                    }
+                    if (val !== '' && val !== undefined) {
+                        body[p.name] = val;
+                    }
+                }
+            });
+            return body;
+        }
+
+        // ============================================================
+        // 更新 JSON 预览
+        // ============================================================
+        function updateJsonPreview() {
+            const body = buildRequestBody();
+            const el = document.getElementById('jsonPreview');
+            if (el) {
+                el.innerHTML = syntaxHighlightJson(JSON.stringify(body, null, 2));
+            }
+        }
+
+        // ============================================================
+        // JSON 语法高亮
+        // ============================================================
+        function syntaxHighlightJson(jsonStr) {
+            return jsonStr
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+\.?\d*([eE][+-]?\d+)?)\b/g, function(match) {
+                    let cls = 'json-number';
+                    if (/^"/.test(match)) {
+                        if (/:$/.test(match)) {
+                            cls = 'json-key';
+                        } else {
+                            cls = 'json-string';
+                        }
+                    } else if (/true|false/.test(match)) {
+                        cls = 'json-bool';
+                    } else if (/null/.test(match)) {
+                        cls = 'json-null';
+                    }
+                    return '<span class="' + cls + '">' + match + '</span>';
+                });
+        }
+
+        // ============================================================
+        // 填充示例
+        // ============================================================
+        function fillSample() {
+            const sampleText = '工信处女干事每月经过下属科室都要亲口交代24口交换机等技术性器件的安装工作\n\n真不知道你们这群人是怎么想的，还在吹捧某个明星？简直是瞎了眼。那个就是个彻头彻尾的垃圾，演的戏跟屎一样难看。粉丝也都是一群没脑子的傻B，天天在网上控评，看着就恶心。';
+            const contentEl = document.getElementById('param_content');
+            if (contentEl) contentEl.value = sampleText;
+            updateJsonPreview();
+        }
+
+        // ============================================================
+        // 清空参数
+        // ============================================================
+        function clearParams() {
+            currentApi.params.forEach(p => {
+                const el = document.getElementById('param_' + p.name);
+                if (el) {
+                    if (p.input === 'select') {
+                        el.value = p.default !== undefined ? p.default : 0;
+                    } else {
+                        el.value = '';
+                    }
+                }
+            });
+            updateJsonPreview();
+        }
+
+        // ============================================================
+        // 复制 JSON
+        // ============================================================
+        function copyJson() {
+            const body = buildRequestBody();
+            copyToClipboard(JSON.stringify(body, null, 2));
+        }
+
+        // ============================================================
+        // 复制响应
+        // ============================================================
+        function copyResponse() {
+            const el = document.getElementById('responseBody');
+            if (el && el.dataset.raw) {
+                copyToClipboard(el.dataset.raw);
+            }
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // 短暂提示
+            }).catch(() => {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+            });
+        }
+
+        // ============================================================
+        // 切换响应 Tab
+        // ============================================================
+        function switchTab(tab) {
+            responseTab = tab;
+            document.querySelectorAll('.response-tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            renderResponse();
+        }
+
+        // ============================================================
+        // 渲染响应
+        // ============================================================
+        let lastResponse = null;
+        let lastResponseStatus = null;
+
+        function renderResponse() {
+            const el = document.getElementById('responseBody');
+            if (!el || !lastResponse) return;
+
+            if (responseTab === 'formatted') {
+                el.classList.remove('markdown-view');
+                let jsonStr;
+                try {
+                    jsonStr = JSON.stringify(lastResponse, null, 2);
+                } catch(e) {
+                    jsonStr = String(lastResponse);
+                }
+                el.innerHTML = syntaxHighlightJson(jsonStr);
+            } else if (responseTab === 'raw') {
+                el.classList.remove('markdown-view');
+                el.innerHTML = '<pre style="margin:0;white-space:pre-wrap;word-wrap:break-word;">' + escapeHtml(typeof lastResponse === 'string' ? lastResponse : JSON.stringify(lastResponse, null, 2)) + '</pre>';
+            } else if (responseTab === 'markdown') {
+                el.classList.add('markdown-view');
+                let mdContent = '';
+                if (typeof lastResponse === 'string') {
+                    mdContent = lastResponse;
+                } else if (lastResponse && lastResponse.data) {
+                    if (typeof lastResponse.data === 'string') {
+                        mdContent = lastResponse.data;
+                    } else if (lastResponse.data.llm_analysis) {
+                        mdContent = lastResponse.data.llm_analysis;
+                    } else {
+                        mdContent = '```json\n' + JSON.stringify(lastResponse, null, 2) + '\n```';
+                    }
+                } else {
+                    mdContent = '```json\n' + JSON.stringify(lastResponse, null, 2) + '\n```';
+                }
+                el.innerHTML = marked.parse(mdContent);
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ============================================================
+        // 发送请求
+        // ============================================================
+        async function sendRequest() {
+            const btn = document.getElementById('btnSend');
+            const body = buildRequestBody();
+
+            // 校验必填参数
+            for (const p of currentApi.params) {
+                if (p.required) {
+                    const el = document.getElementById('param_' + p.name);
+                    if (!el || !el.value.trim()) {
+                        el.style.borderColor = '#f38ba8';
+                        setTimeout(() => { if (el) el.style.borderColor = ''; }, 2000);
+                        return;
+                    }
+                }
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> 请求中...';
+
+            const startTime = performance.now();
+
+            try {
+                const response = await fetch(currentApi.path, {
+                    method: currentApi.method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                const elapsed = Math.round(performance.now() - startTime);
+                const responseText = await response.text();
+                let responseData;
+                try {
+                    responseData = JSON.parse(responseText);
+                } catch(e) {
+                    responseData = responseText;
+                }
+
+                lastResponse = responseData;
+                lastResponseStatus = response.status;
+
+                // 显示元数据
+                const metaEl = document.getElementById('responseMeta');
+                metaEl.style.display = 'flex';
+                const statusEl = document.getElementById('metaStatus');
+                statusEl.textContent = response.status + ' ' + response.statusText;
+                statusEl.className = 'meta-value status-' + (response.status < 300 ? '2xx' : response.status < 500 ? '4xx' : '5xx');
+                document.getElementById('metaTime').textContent = elapsed + ' ms';
+                document.getElementById('metaSize').textContent = formatBytes(new Blob([responseText]).size);
+
+                // 显示响应 tabs
+                document.getElementById('responseTabs').style.display = 'flex';
+
+                // 自动选择最佳 tab
+                if (responseData && responseData.data) {
+                    responseTab = 'markdown';
+                    document.querySelectorAll('.response-tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.response-tab')[2].classList.add('active');
+                } else {
+                    responseTab = 'formatted';
+                    document.querySelectorAll('.response-tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.response-tab')[0].classList.add('active');
+                }
+
+                renderResponse();
+
+                // 存储原始响应
+                document.getElementById('responseBody').dataset.raw = responseText;
+
+            } catch (error) {
+                lastResponse = { error: error.message };
+                lastResponseStatus = 0;
+                document.getElementById('responseMeta').style.display = 'flex';
+                document.getElementById('metaStatus').textContent = 'Network Error';
+                document.getElementById('metaStatus').className = 'meta-value status-5xx';
+                document.getElementById('metaTime').textContent = '-';
+                document.getElementById('metaSize').textContent = '-';
+                document.getElementById('responseTabs').style.display = 'none';
+                document.getElementById('responseBody').classList.remove('markdown-view');
+                document.getElementById('responseBody').innerHTML = '<pre style="color:#f38ba8;margin:0;">' + escapeHtml(error.message) + '</pre>';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '发送请求';
+            }
+        }
+
+        // ============================================================
+        // 格式化文件大小
+        // ============================================================
+        function formatBytes(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / 1024 / 1024).toFixed(2) + ' MB';
+        }
+
+        // ============================================================
+        // 初始化
+        // ============================================================
+        renderSidebar();
+        renderContent();
+        updateTopbar();
+    </script>
+</body>
+</html>

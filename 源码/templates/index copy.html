@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>文本内容检测</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        textarea {
+            width: 100%;
+            height: 300px;
+            margin-bottom: 10px;
+        }
+        .buttons {
+            margin-bottom: 10px;
+        }
+        .result {
+            padding: 10px;
+            border: 1px solid #ccc;
+            background-color: #f8f8f8;
+        }
+        #loader {
+            display: none;
+            border: 16px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 16px solid #3498db;
+            width: 120px;
+            height: 120px;
+            -webkit-animation: spin 2s linear infinite; /* Safari */
+            animation: spin 2s linear infinite;
+            margin: 20px auto;
+        }
+
+        /* Safari */
+        @-webkit-keyframes spin {
+            0% { -webkit-transform: rotate(0deg); }
+            100% { -webkit-transform: rotate(360deg); }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>九瑞文本内容检测_功能演示</h1>
+        <form method="post" id="check-form" action="/">
+            <button type="button" onclick="fillWithSampleText()">测试样例</button>
+            <button type="button" onclick="clearTextarea()">一键清空</button>
+            <button type="button" onclick="document.getElementById('file-upload').click()">文件上传</button>（支持txt/docx/pdf格式，测试环境资源有限，建议文件不超过5MB）
+            <input type="file" id="file-upload" accept=".txt,.docx,.pdf" style="display: none;">
+            <textarea name="text" placeholder="在此处输入文本...">{{ text }}</textarea>
+            <div class="buttons">
+                <button type="submit" name="check_type" value="sensitive">敏感词检测</button>（当前敏感词库：64419条）
+                <button type="submit" name="check_type" value="semantic">语义合规检测</button>
+            </div>
+        </form>
+        <div id="loader"></div>
+        <div id="result-container">
+            <div class="result" id="semantic-result"></div>
+        </div>
+        <div id="sensitive-result-container">
+            <div class="result" id="sensitive-result"></div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('check-form').addEventListener('submit', function(event) {
+            if (event.submitter.value === 'semantic') {
+                event.preventDefault();
+                showLoader('semantic');
+                const text = document.querySelector('textarea[name="text"]').value;
+                fetch('/semantic_check', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ text: text })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    hideLoader();
+                    const resultDiv = document.getElementById('semantic-result');
+                    if (data.error) {
+                        resultDiv.innerHTML = `<p>Error: ${data.error}</p>`;
+                    } else {
+                        resultDiv.innerHTML = marked.parse(data.result);
+                    }
+                    document.getElementById('result-container').style.display = 'block';
+                    document.getElementById('sensitive-result-container').style.display = 'none';
+                })
+                .catch(error => {
+                    hideLoader();
+                    const resultDiv = document.getElementById('semantic-result');
+                    resultDiv.innerHTML = `<p>Error: ${error}</p>`;
+                    document.getElementById('result-container').style.display = 'block';
+                    document.getElementById('sensitive-result-container').style.display = 'none';
+                });
+            } else if (event.submitter.value === 'sensitive') {
+                showLoader('sensitive');
+                document.getElementById('result-container').style.display = 'none';
+                document.getElementById('sensitive-result-container').style.display = 'block';
+            }
+        });
+
+        function showLoader(type) {
+            document.getElementById('loader').style.display = 'block';
+            if (type === 'semantic') {
+                document.getElementById('result-container').style.display = 'none';
+                document.getElementById('sensitive-result-container').style.display = 'none';
+            } else if (type === 'sensitive') {
+                document.getElementById('result-container').style.display = 'none';
+                document.getElementById('sensitive-result-container').style.display = 'none';
+            }
+        }
+
+        function hideLoader() {
+            document.getElementById('loader').style.display = 'none';
+        }
+
+        function clearTextarea() {
+            document.querySelector('textarea[name="text"]').value = '';
+        }
+
+        function fillWithSampleText() {
+            document.querySelector('textarea[name="text"]').value = `{{ default_text }}`;
+        }
+
+        document.getElementById('file-upload').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (!file) {
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            showLoader('file-upload');
+
+            fetch('/upload_file', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoader();
+                if (data.error) {
+                    alert('文件上传失败: ' + data.error);
+                } else {
+                    document.querySelector('textarea[name="text"]').value = data.text;
+                }
+            })
+            .catch(error => {
+                hideLoader();
+                alert('文件上传失败: ' + error);
+            });
+        });
+
+        // Display sensitive result if available on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const sensitiveResult = `{{ sensitive_result | safe }}`;
+            if (sensitiveResult && sensitiveResult.trim() !== '') {
+                document.getElementById('sensitive-result').innerHTML = sensitiveResult;
+                document.getElementById('sensitive-result-container').style.display = 'block';
+                document.getElementById('result-container').style.display = 'none';
+            } else {
+                document.getElementById('sensitive-result-container').style.display = 'none';
+                document.getElementById('result-container').style.display = 'none';
+            }
+        });
+    </script>
+    <div style="text-align: center; margin-top: 20px; font-size: 0.8em; color: #888;">
+        北京九瑞网络科技有限公司 版权所有    <br> ver：1105_200
+    </div>
+</body>
+</html>

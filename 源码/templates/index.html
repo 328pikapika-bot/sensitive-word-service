@@ -1,0 +1,380 @@
+<!-- HTML 文档类型声明 -->
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"> <!-- 设置字符编码为 UTF-8 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"> <!-- 响应式设计，确保在不同设备上良好显示 -->
+    <title>文本内容检测</title> <!-- 页面标题 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script> <!-- 引入 Marked.js 库，用于将 Markdown 转换为 HTML -->
+    <style>
+        /* 全局样式 */
+        body {
+            background-color: #f0f2f5; /* 背景颜色 */
+            color: #333; /* 文本颜色 */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* 字体设置 */
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 100vh; /* 最小高度为视口高度 */
+            margin: 0;
+        }
+        /* 容器样式 */
+        .container {
+            width: 90%;
+            max-width: 1000px; /* 最大宽度 */
+            background-color: #fff; /* 背景颜色 */
+            padding: 30px; /* 内边距 */
+            border-radius: 10px; /* 圆角 */
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* 阴影效果 */
+            margin: auto; /* 居中显示 */
+        }
+        /* 标题样式 */
+        h1 {
+            color: #007bff; /* 标题颜色 */
+            text-align: center; /* 居中对齐 */
+            margin-bottom: 30px; /* 下外边距 */
+            font-size: 2.5em; /* 字体大小 */
+            font-weight: 600; /* 字体粗细 */
+        }
+        /* 文本域样式 */
+        textarea {
+            width: 100%;
+            height: 250px; /* 高度 */
+            margin-bottom: 20px; /* 下外边距 */
+            background-color: #f8f9fa; /* 背景颜色 */
+            color: #333; /* 文本颜色 */
+            border: 1px solid #ced4da; /* 边框 */
+            border-radius: 5px; /* 圆角 */
+            padding: 10px; /* 内边距 */
+            box-sizing: border-box; /* 盒模型 */
+            resize: vertical; /* 允许垂直调整大小 */
+            font-size: 1em; /* 字体大小 */
+        }
+        /* 按钮组样式 */
+        .buttons {
+            display: flex;
+            gap: 10px; /* 按钮间距 */
+            margin-top: 20px; /* 上外边距 */
+            flex-wrap: wrap; /* 允许换行 */
+        }
+        /* 按钮通用样式 */
+        button, input[type="submit"] {
+            background-color: #007bff; /* 背景颜色 */
+            color: white; /* 文本颜色 */
+            border: none; /* 无边框 */
+            padding: 12px 20px; /* 内边距 */
+            border-radius: 5px; /* 圆角 */
+            cursor: pointer; /* 鼠标指针样式 */
+            transition: background-color 0.3s, transform 0.2s; /* 过渡效果 */
+            font-size: 1em; /* 字体大小 */
+            box-shadow: 0 2px 5px rgba(0, 123, 255, 0.2); /* 阴影效果 */
+        }
+        /* 特定按钮样式 */
+        button[name="check_type"] {
+            flex: 1 1 0; /* 四个按钮等宽分布一排 */
+            min-width: 0;
+            white-space: nowrap;
+            box-shadow: 0 2px 5px rgba(0, 123, 255, 0.2);
+            text-align: center;
+        }
+        /* 语义检测Plus按钮的特殊样式 */
+        button[value="semantic_plus"] {
+            background-color: #FF8C00; /* 橘色背景 */
+            box-shadow: 0 2px 5px rgba(255, 140, 0, 0.4); /* 橘色阴影 */
+        }
+        /* 敏感词检测Plus按钮的特殊样式 */
+        button[value="sensitive_plus"] {
+            background-color: #28a745; /* 绿色背景 */
+            box-shadow: 0 2px 5px rgba(40, 167, 69, 0.4); /* 绿色阴影 */
+        }
+        /* 文件提示信息样式 */
+        .file-note {
+            font-size: 0.9em; /* 字体大小 */
+            color: #6c757d; /* 文本颜色 */
+            margin-left: 10px; /* 左外边距 */
+            white-space: normal; /* 允许文本换行 */
+            word-break: break-word; /* 长单词断行 */
+        }
+        /* 结果显示区域样式 */
+        .result {
+            padding: 30px; /* 增加内边距 */
+            border: 1px solid #dee2e6; /* 边框 */
+            background-color: #fefefe; /* 背景颜色 */
+            border-radius: 8px; /* 圆角 */
+            margin-top: 25px; /* 上外边距 */
+            white-space: pre-wrap; /* 保留空白符和换行 */
+            word-wrap: break-word; /* 单词断行 */
+            color: #212529; /* 文本颜色 */
+            font-size: 1.1em; /* 字体大小 */
+            line-height: 1.6; /* 行高 */
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1); /* 阴影效果 */
+        }
+        /* 结果区域内标题样式 */
+        .result h3 {
+            color: #0056b3; /* 标题颜色 */
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-size: 1.5em;
+            border-bottom: 2px solid #e9ecef; /* 底部边框 */
+            padding-bottom: 5px;
+        }
+        /* 结果区域内列表样式 */
+        .result ul, .result ol {
+            margin-left: 25px;
+            margin-bottom: 15px;
+        }
+        /* 结果区域内列表项样式 */
+        .result li {
+            margin-bottom: 8px;
+        }
+        /* 结果区域内段落样式 */
+        .result p {
+            margin-bottom: 15px;
+        }
+        /* 语义检测Plus结果区域的特殊背景色 */
+        .result-plus {
+            background-color: #e0f7fa; /* 浅青色背景 */
+        }
+        /* 加载动画样式 */
+        #loader {
+            display: none; /* 默认隐藏 */
+            border: 8px solid #e9ecef;
+            border-radius: 50%; /* 圆形 */
+            border-top: 8px solid #007bff; /* 顶部边框颜色 */
+            width: 60px;
+            height: 60px;
+            animation: spin 1.5s linear infinite; /* 旋转动画 */
+            margin: 30px auto; /* 居中显示 */
+        }
+        /* 旋转动画关键帧 */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* 底部样式 */
+        .footer {
+            text-align: center; 
+            margin-top: 30px; 
+            font-size: 0.8em; 
+            color: #6c757d;
+            padding-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>九瑞文本内容检测系统<br/>功能演示</h1>
+        <form method="post" id="check-form" action="/">
+            <button type="button" onclick="fillWithSampleText()">测试样例</button> <!-- 填充示例文本按钮 -->
+            <button type="button" onclick="clearTextarea()">一键清空</button> <!-- 清空文本域按钮 -->
+            <button type="button" onclick="document.getElementById('file-upload').click()">文件上传</button> <!-- 文件上传按钮 -->
+            <input type="file" id="file-upload" accept=".txt,.docx,.pdf" style="display: none;"><span class="file-note">（支持txt/docx/pdf格式，测试环境资源有限，建议文件不超过5MB）</span>
+            <textarea name="text" placeholder="在此处输入文本...">{{ text }}</textarea>
+            <span class="file-note">（当前敏感词库基于网络用语，含敏感词107093条；支持自定义敏感词库）</span>
+            <div class="buttons">
+                <button type="submit" name="check_type" value="sensitive_buggy">敏感词检测（典型错误）</button>
+                <button type="submit" name="check_type" value="sensitive">敏感词检测</button>
+                <button type="submit" name="check_type" value="sensitive_plus">敏感词检测Plus</button>
+                <button type="submit" name="check_type" value="semantic">语义检测</button>
+                <button type="submit" name="check_type" value="semantic_plus">语义检测Plus</button>
+            </div>
+        </form>
+        <div id="loader"></div> <!-- 加载动画显示区域 -->
+        <div id="result-container">
+            <div class="result" id="semantic-result"></div> <!-- 语义检测结果显示区域 -->
+        </div>
+        <div id="sensitive-result-container">
+            <div class="result" id="sensitive-result"></div> <!-- 敏感词检测结果显示区域 -->
+        </div>
+    </div>
+
+    <script>
+        // 监听表单提交事件
+        document.getElementById('check-form').addEventListener('submit', function(event) {
+            // 如果是语义检测按钮被点击
+            if (event.submitter.value === 'semantic') {
+                event.preventDefault(); // 阻止表单默认提交行为
+                showLoader('semantic'); // 显示加载动画
+                const text = document.querySelector('textarea[name="text"]').value; // 获取文本域内容
+                // 发送 AJAX 请求到后端进行语义检测
+                fetch('/semantic_check', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ text: text }) // 将文本内容转换为 JSON 字符串发送
+                })
+                .then(response => response.json()) // 解析 JSON 响应
+                .then(data => {
+                    hideLoader(); // 隐藏加载动画
+                    const resultDiv = document.getElementById('semantic-result');
+                    resultDiv.classList.remove('result-plus'); // 确保移除 result-plus 类
+                    if (data.error) {
+                        resultDiv.innerHTML = `<p>Error: ${data.error}</p>`; // 显示错误信息
+                    } else {
+                        resultDiv.innerHTML = marked.parse(data.result); // 使用 marked.js 解析 Markdown 并显示结果
+                    }
+                    document.getElementById('result-container').style.display = 'block'; // 显示语义检测结果容器
+                    document.getElementById('sensitive-result-container').style.display = 'none'; // 隐藏敏感词检测结果容器
+                })
+                .catch(error => {
+                    hideLoader(); // 隐藏加载动画
+                    const resultDiv = document.getElementById('semantic-result');
+                    resultDiv.innerHTML = `<p>Error: ${error}</p>`; // 显示错误信息
+                    document.getElementById('result-container').style.display = 'block'; // 显示语义检测结果容器
+                    document.getElementById('sensitive-result-container').style.display = 'none'; // 隐藏敏感词检测结果容器
+                });
+            } else if (event.submitter.value === 'semantic_plus') { // 如果是语义检测Plus按钮被点击
+                event.preventDefault(); // 阻止表单默认提交行为
+                showLoader('semantic_plus'); // 显示加载动画
+                const text = document.querySelector('textarea[name="text"]').value; // 获取文本域内容
+                // 发送 AJAX 请求到后端进行语义检测Plus
+                fetch('/semantic_check_plus', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ text: text })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    hideLoader(); // 隐藏加载动画
+                    const resultDiv = document.getElementById('semantic-result');
+                    resultDiv.classList.add('result-plus'); // 添加 result-plus 类以应用特殊样式
+                    if (data.error) {
+                        resultDiv.innerHTML = `<p>Error: ${data.error}</p>`; // 显示错误信息
+                    } else {
+                        resultDiv.innerHTML = marked.parse(data.result); // 使用 marked.js 解析 Markdown 并显示结果
+                    }
+                    document.getElementById('result-container').style.display = 'block'; // 显示语义检测结果容器
+                    document.getElementById('sensitive-result-container').style.display = 'none'; // 隐藏敏感词检测结果容器
+                })
+                .catch(error => {
+                    hideLoader(); // 隐藏加载动画
+                    const resultDiv = document.getElementById('semantic-result');
+                    resultDiv.innerHTML = `<p>Error: ${error}</p>`; // 显示错误信息
+                    document.getElementById('result-container').style.display = 'block'; // 显示语义检测结果容器
+                    document.getElementById('sensitive-result-container').style.display = 'none'; // 隐藏敏感词检测结果容器
+                });
+            } else if (event.submitter.value === 'sensitive_plus') { // 敏感词检测Plus按钮
+                event.preventDefault(); // 阻止表单默认提交行为, 使用AJAX
+                showLoader('sensitive'); // 显示加载动画
+                const text = document.querySelector('textarea[name="text"]').value;
+                // 发送 AJAX 请求到后端进行敏感词检测Plus
+                fetch('/sensitive_plus_check', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ text: text })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    hideLoader();
+                    const resultDiv = document.getElementById('sensitive-result');
+                    if (data.error) {
+                        resultDiv.innerHTML = `<p>Error: ${data.error}</p>`;
+                    } else if (data.found_words && data.found_words.length > 0) {
+                        const words = data.found_words.join(', ');
+                        resultDiv.innerHTML = `<p>发现敏感词: <font color='red'>${words}</font></p><p style="font-size:0.85em;color:#6c757d">(Plus引擎: 支持全角/繁体/符号干扰变体检测, 共${data.count}个)</p>`;
+                    } else {
+                        resultDiv.innerHTML = `<p>未发现敏感词。</p><p style="font-size:0.85em;color:#6c757d">(Plus引擎: 支持全角/繁体/符号干扰变体检测)</p>`;
+                    }
+                    document.getElementById('result-container').style.display = 'none';
+                    document.getElementById('sensitive-result-container').style.display = 'block';
+                })
+                .catch(error => {
+                    hideLoader();
+                    const resultDiv = document.getElementById('sensitive-result');
+                    resultDiv.innerHTML = `<p>Error: ${error}</p>`;
+                    document.getElementById('result-container').style.display = 'none';
+                    document.getElementById('sensitive-result-container').style.display = 'block';
+                });
+            } else if (event.submitter.value === 'sensitive') { // 如果是敏感词检测按钮被点击
+                showLoader('sensitive'); // 显示加载动画
+                document.getElementById('result-container').style.display = 'none'; // 隐藏语义检测结果容器
+                document.getElementById('sensitive-result-container').style.display = 'block'; // 显示敏感词检测结果容器
+            } else if (event.submitter.value === 'sensitive_buggy') { // 典型错误检测按钮
+                showLoader('sensitive');
+                document.getElementById('result-container').style.display = 'none';
+                document.getElementById('sensitive-result-container').style.display = 'block';
+            }
+        });
+
+        // 显示加载动画函数
+        function showLoader(type) {
+            document.getElementById('loader').style.display = 'block'; // 显示加载动画
+            if (type === 'semantic') {
+                document.getElementById('result-container').style.display = 'none'; // 隐藏语义检测结果容器
+                document.getElementById('sensitive-result-container').style.display = 'none'; // 隐藏敏感词检测结果容器
+            } else if (type === 'sensitive') {
+                document.getElementById('result-container').style.display = 'none'; // 隐藏语义检测结果容器
+                document.getElementById('sensitive-result-container').style.display = 'none'; // 隐藏敏感词检测结果容器
+            }
+        }
+
+        // 隐藏加载动画函数
+        function hideLoader() {
+            document.getElementById('loader').style.display = 'none'; // 隐藏加载动画
+        }
+
+        // 清空文本域函数
+        function clearTextarea() {
+            document.querySelector('textarea[name="text"]').value = ''; // 清空文本域内容
+        }
+
+        // 填充示例文本函数
+        function fillWithSampleText() {
+            document.querySelector('textarea[name="text"]').value = `{{ default_text }}`; // 填充默认文本
+        }
+
+        // 监听文件上传事件
+        document.getElementById('file-upload').addEventListener('change', function(event) {
+            const file = event.target.files[0]; // 获取选择的文件
+            if (!file) {
+                return;
+            }
+
+            const formData = new FormData(); // 创建 FormData 对象
+            formData.append('file', file); // 将文件添加到 FormData 中
+
+            showLoader('file-upload'); // 显示加载动画
+
+            // 发送 AJAX 请求到后端进行文件上传
+            fetch('/upload_file', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json()) // 解析 JSON 响应
+            .then(data => {
+                hideLoader(); // 隐藏加载动画
+                if (data.error) {
+                    alert('文件上传失败: ' + data.error); // 显示错误信息
+                } else {
+                    document.querySelector('textarea[name="text"]').value = data.text; // 将文件内容填充到文本域
+                }
+            })
+            .catch(error => {
+                hideLoader(); // 隐藏加载动画
+                alert('文件上传失败: ' + error); // 显示错误信息
+            });
+        });
+
+        // 页面加载完成后显示敏感词检测结果（如果存在）
+        document.addEventListener('DOMContentLoaded', function() {
+            const sensitiveResult = `{{ sensitive_result | safe }}`; // 获取敏感词检测结果
+            if (sensitiveResult && sensitiveResult.trim() !== '') {
+                document.getElementById('sensitive-result').innerHTML = sensitiveResult; // 显示结果
+                document.getElementById('sensitive-result-container').style.display = 'block'; // 显示敏感词结果容器
+                document.getElementById('result-container').style.display = 'none'; // 隐藏语义检测结果容器
+            } else {
+                document.getElementById('sensitive-result-container').style.display = 'none'; // 隐藏敏感词结果容器
+                document.getElementById('result-container').style.display = 'none'; // 隐藏语义检测结果容器
+            }
+        });
+    </script>
+    <div style="text-align: center; margin-top: 20px; font-size: 0.8em; color: #888;">
+        北京九瑞网络科技有限公司 版权所有    <br> ver：2.0 API版 &nbsp;|&nbsp; <a href="/api_test" style="color:#007bff;text-decoration:none;">API 在线测试</a>
+    </div>
+</body>
+</html>
